@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="gu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123b73">
+  <title>Gujarati Steno Master</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand-mark">GS</div>
+  <div><h1>GUJARATI STENO MASTER</h1><p>ગુજરાતી સ્ટેનોગ્રાફી ડિક્ટેશન પ્રેક્ટિસ</p></div>
+  <span class="badge">FREE PRACTICE</span>
+</header>
+<main>
+  <section class="intro">
+    <div><span class="eyebrow">YOUR DAILY PRACTICE PLATFORM</span><h2>તમારી પરીક્ષા માટે<br><em>સ્માર્ટ ડિક્ટેશન પ્રેક્ટિસ</em></h2>
+    <p>પરીક્ષા, સમય અને ઝડપ પસંદ કરો. AI તમારા અભ્યાસ માટે નવો ગુજરાતી ફકરો તૈયાર કરશે.</p></div>
+    <div class="hero-icon" aria-hidden="true">✍️</div>
+  </section>
+
+  <section class="panel settings">
+    <div class="section-title"><span>01</span><div><h3>Practice Settings</h3><p>તમારી ડિક્ટેશન પસંદગી કરો</p></div></div>
+    <div class="grid">
+      <label>પરીક્ષા પસંદ કરો
+        <select id="exam">
+          <option value="GSSSB">GSSSB</option><option value="GPSC">GPSC</option>
+          <option value="GCC">GCC</option><option value="HIGH COURT">HIGH COURT</option>
+        </select>
+      </label>
+      <label>સમય પસંદ કરો
+        <select id="minutes"><option value="2">2 Minutes</option><option value="4">4 Minutes</option><option value="5" selected>5 Minutes</option></select>
+      </label>
+      <label>ડિક્ટેશન ઝડપ (WPM)
+        <select id="wpm"><option>60</option><option selected>80</option><option>90</option><option>110</option></select>
+      </label>
+      <label>Audio Voice
+        <select id="voice"><option value="Kore">Female Voice</option><option value="Charon">Male Voice</option></select>
+      </label>
+    </div>
+    <button class="primary" id="generate">✦ Generate Gujarati Dictation</button>
+    <p class="hint">નોંધ: શબ્દોની સંખ્યા પસંદ કરેલી WPM × મિનિટ પ્રમાણે લક્ષ્ય રાખવામાં આવશે. વાસ્તવિક પરીક્ષા-ગતિ માટે તમારા અભ્યાસ મુજબ ચકાસો.</p>
+  </section>
+
+  <section class="panel result hidden" id="result">
+    <div class="result-head"><div><span class="eyebrow">YOUR GENERATED PASSAGE</span><h3 id="resultTitle">GSSSB · 5 MIN · 80 WPM</h3></div><button class="soft" id="copy">Copy Passage</button></div>
+    <div class="stats"><div><b id="wordCount">0</b><span>Words</span></div><div><b id="charCount">0</b><span>Characters</span></div><div><b id="targetCount">400</b><span>Target Words</span></div></div>
+    <article id="passage" class="passage" lang="gu"></article>
+    <div class="audio-box">
+      <div><h4>🎧 Gujarati Dictation Audio</h4><p>Natural AI voice · WAV download</p></div>
+      <button class="primary small" id="makeAudio">Generate Audio</button>
+    </div>
+    <div id="audioControls" class="hidden">
+      <audio id="audio" controls></audio>
+      <div class="audio-actions">
+        <label>Playback speed <select id="audioSpeed"></select></label>
+        <a id="downloadAudio" class="download" download="gujarati-dictation.wav">⬇ Download WAV</a>
+      </div>
+      <p class="hint">Audio playback speed is adjusted approximately from the generated base voice. Actual syllable/word timing may vary.</p>
+    </div>
+    <div class="vocab-head"><div><span class="eyebrow">BUILD YOUR VOCABULARY</span><h3>Practice Vocabulary</h3></div></div>
+    <div class="vocab-grid">
+      <div class="vocab-card"><h4>🟢 Easy Words <span>30</span></h4><ol id="easy"></ol></div>
+      <div class="vocab-card"><h4>🟡 Medium Words <span>30</span></h4><ol id="medium"></ol></div>
+      <div class="vocab-card"><h4>🔴 Hard Words <span>30</span></h4><ol id="hard"></ol></div>
+    </div>
+    <button class="outline" id="newPassage">Generate Another Passage</button>
+  </section>
+  <div id="status" class="status" role="status"></div>
+</main>
+<footer>Developed by – <strong>Gohel Dhruv</strong></footer>
+<script src="/app.js"></script>
+</body></html>
