@@ -103,26 +103,23 @@ async function handleGenerate(request, env) {
     const result = await safeJson(apiRes);
 
     if (!apiRes.ok) {
- 
-      return json({
-        error: "Gemini તરફથી ખાલી જવાબ મળ્યો. ફરી પ્રયાસ કરો."
-      }, 502);
-    }
-      return json({
-        error: result?.error?.message ||
-          `Gemini text API error (HTTP ${apiRes.status}).`,
-        model: usedModel
-      }, apiRes.status);
+  return json({
+    error: result?.error?.message ||
+      `Gemini text API error (HTTP ${apiRes.status}).`,
+    model: usedModel
+  }, apiRes.status);
     }
 
     const raw = result?.candidates?.[0]?.content?.parts
       ?.map(p => p.text || "").join("").trim();
 
     if (!raw) {
-          
+  return json({
+    error: "Gemini તરફથી ખાલી જવાબ મળ્યો. ફરી પ્રયાસ કરો."
+  }, 502);
+}
 
-    let parsed;
-
+let parsed;
     try {
       parsed = JSON.parse(raw);
     } catch {
