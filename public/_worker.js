@@ -154,49 +154,83 @@ let parsed;
         ]
       };
 
-      let retryRes = await fetchTextModel(
-        TEXT_MODEL, retryBody, env.GEMINI_API_KEY
-      );
+      let actualWords = countWords(parsed.passage);
+let combinedPassage = parsed.passage.trim();
 
-      let retryModel = TEXT_MODEL;
+for (let attempt = 1; actualWords < targetWords && attempt <= 5; attempt++) {
+  const missingWords = targetWords - actualWords;
 
-      if ([429, 500, 502, 503, 504].includes(retryRes.status)) {
-        retryRes = await fetchTextModel(
-          TEXT_BACKUP_MODEL, retryBody, env.GEMINI_API_KEY
-        );
-        retryModel = TEXT_BACKUP_MODEL;
-      }
+  const extraPrompt = `નીચે આપેલા ગુજરાતી ફકરાને આગળ વધારવા માટે નવો ટેક્સ્ટ લખો.
 
-      if (!retryRes.ok) continue;
+પરીક્ષા: ${exam}
+વિષય: ${guidance}
 
-      const retryResult = await safeJson(retryRes);
-      const retryRaw = retryResult?.candidates?.[0]?.content?.parts
-        ?.map(p => p.text || "").join("").trim();
+હાલના ફકરામાં ${actualWords} શબ્દો છે.
+હજુ ઓછામાં ઓછા ${missingWords + 30} નવા શબ્દો ઉમેરવાના છે.
 
-      if (!retryRaw) continue;
+મહત્વપૂર્ણ:
+- અગાઉના ફકરાનું પુનરાવર્તન ન કરો.
+- એ જ વિષયને સ્વાભાવિક રીતે આગળ વધારો.
+- શુદ્ધ ગુજરાતી વ્યાકરણ અને જોડણી વાપરો.
+- ઓછામાં ઓછા ${missingWords + 30} નવા શબ્દો લખો.
+- માત્ર JSON આપો.
 
-      try {
-        const retryParsed = JSON.parse(retryRaw);
+હાલનો ફકરો:
+${combinedPassage}
 
-        if (typeof retryParsed.passage === "string") {
-          const retryCount = countWords(retryParsed.passage);
+ફોર્મેટ:
+{"extra":"અહીં નવો ગુજરાતી ટેક્સ્ટ લખો."}`;
 
-          if (retryCount >= targetWords) {
-            parsed = retryParsed;
-            usedModel = retryModel;
-            actualWords = retryCount;
-          }
-        }
-      } catch {}
+  const extraBody = {
+    contents: [
+      { role: "user", parts: [{ text: extraPrompt }] }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.55,
+      maxOutputTokens: 8000
     }
+  };
 
-    if (actualWords < targetWords) {
-      return json({
-        error: `લક્ષ્ય ${targetWords} શબ્દો છે, પરંતુ Gemini એ માત્ર ${actualWords} શબ્દો આપ્યા. Model: ${usedModel}.`,
-        actualWords,
-        targetWords
-      }, 502);
-              }
+  let extraRes = await fetchTextModel(
+    TEXT_MODEL, extraBody, env.GEMINI_API_KEY
+  );
+
+  let extraModel = TEXT_MODEL;
+
+  if ([429, 500, 502, 503, 504].includes(extraRes.status)) {
+    extraRes = await fetchTextModel(
+      TEXT_BACKUP_MODEL, extraBody, env.GEMINI_API_KEY
+    );
+    extraModel = TEXT_BACKUP_MODEL;
+  }
+
+  if (!extraRes.ok) continue;
+
+  const extraResult = await safeJson(extraRes);
+  const extraRaw = extraResult?.candidates?.[0]?.content?.parts
+    ?.map(p => p.text || "").join("").trim();
+
+  if (!extraRaw) continue;
+
+  try {
+    const extraParsed = JSON.parse(extraRaw);
+
+    if (typeof extraParsed.extra === "string") {
+      const addition = extraParsed.extra.trim();
+      const addedWords = countWords(addition);
+
+      if (addedWords > 0) {
+        combinedPassage += " " + addition;
+        actualWords = countWords(combinedPassage);
+        usedModel = extraModel;
+      }
+    }
+  } catch {}
+}
+
+
+parsed.passage = combinedPassage;
     return json({
       passage: parsed.passage,
       model: usedModel
