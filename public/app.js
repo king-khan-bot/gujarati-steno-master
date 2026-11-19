@@ -56,42 +56,47 @@ async function generate(){
     if (!res.ok) {
       throw new Error(data.error || `Error HTTP ${res.status}`);
     }
-
-    if (!data.passage) {
-      throw new Error("Passage મળ્યો નથી.");
-   async function makeAudio(){
-  if(!currentPassage)return;
-  $("makeAudio").disabled=true;$("makeAudio").textContent="Creating audio…";setStatus("Gemini Gujarati voice audio બનાવી રહ્યું છે. થોડો સમય લાગી શકે છે…");
-  try{
-    const res=await fetch("/api/audio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:currentPassage,voice:$("voice").value,wpm:Number($("wpm").value)})});
-    if(!res.ok){
-      const raw=await res.text(); let err={};
-      try{err=raw?JSON.parse(raw):{};}catch{}
-      throw new Error(err.error||`Audio બનાવી શકાઈ નથી (HTTP ${res.status}).`);
-    }
-    currentAudioBlob=await res.blob();
-    generatedWpm=Number($("wpm").value);
-    const url=URL.createObjectURL(currentAudioBlob);
-    $("audio").src=url;$("audio").playbackRate=1;
-    const speedSelect=$("audioSpeed"); speedSelect.innerHTML="";
-    [60,80,90,110].forEach(speed=>{
-      const opt=document.createElement("option");
-      opt.value=String(speed/generatedWpm);
-      opt.textContent=`${speed} WPM (approx.)`;
-      if(speed===generatedWpm) opt.selected=true;
-      speedSelect.appendChild(opt);
-    });
-    $("downloadAudio").href=url;
-    $("audioControls").classList.remove("hidden");
-    setStatus("Audio તૈયાર છે. Play કરો અથવા WAV download કરો.");
-  }catch(err){setStatus(err.message)}
-  finally{$("makeAudio").disabled=false;$("makeAudio").textContent="Generate Audio"}
+if (!data.passage) {
+  throw new Error("Passage મળ્યો નથી.");
 }
-$("generate").addEventListener("click",generate);
-$("newPassage").addEventListener("click",generate);
-$("makeAudio").addEventListener("click",makeAudio);
-$("audioSpeed").addEventListener("change",e=>{$("audio").playbackRate=Number(e.target.value)});
 
+showPassage(data);
+
+setStatus("ગુજરાતી ફકરો તૈયાર થયો. હવે શબ્દભંડોળ તૈયાર થઈ રહ્યું છે...");
+
+const vocabRes = await fetch("/api/vocabulary", {
+  method: "POST",
+  headers: {"Content-Type": "application/json"},
+  body: JSON.stringify({passage: currentPassage})
+});
+
+const vocabRaw = await vocabRes.text();
+let vocabData = {};
+
+try {
+  vocabData = vocabRaw ? JSON.parse(vocabRaw) : {};
+} catch {
+  throw new Error("શબ્દભંડોળનો જવાબ યોગ્ય નથી.");
+}
+
+if (!vocabRes.ok) {
+  throw new Error(vocabData.error || "શબ્દભંડોળ તૈયાર થઈ શક્યું નથી.");
+}
+
+fillList("easy", vocabData.vocabulary?.easy);
+fillList("medium", vocabData.vocabulary?.medium);
+fillList("hard", vocabData.vocabulary?.hard);
+
+setStatus("તમારો નવો Dictation Passage અને શબ્દભંડોળ તૈયાર છે.");
+$("result").scrollIntoView({behavior:"smooth", block:"start"});
+
+} catch(err) {
+  setStatus(err.message);
+} finally {
+  $("generate").disabled = false;
+  $("generate").textContent = "✦ Generate Gujarati Dictation";
+}
+}
 async function audioAtSelectedSpeed(){
   if(!currentAudioBlob) return;
   const rate=Number($("audioSpeed").value);
