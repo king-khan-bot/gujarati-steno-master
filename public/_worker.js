@@ -265,7 +265,7 @@ async function fetchTextModel(model, requestBody, apiKey) {
           "x-goog-api-key": apiKey
         },
         body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(20000)
+        signal: AbortSignal.timeout(60000)
       }
     );
   } catch (error) {
