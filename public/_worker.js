@@ -94,7 +94,7 @@ async function handleGenerate(request, env) {
     let usedModel = TEXT_MODEL;
     console.log("Main Gemini status:", apiRes.status);
 
-    if ([429, 500, 502, 503, 504]const result = await safeJson(apiRes);.includes(apiRes.status)) {
+    if ([429, 500, 502, 503, 504].includes(apiRes.status)) {
       apiRes = await fetchTextModel(
         TEXT_BACKUP_MODEL, requestBody, env.GEMINI_API_KEY
       );
