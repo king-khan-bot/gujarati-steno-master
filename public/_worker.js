@@ -134,7 +134,6 @@ async function fetchTextModel(model, requestBody, apiKey) {
     body: JSON.stringify(requestBody)
   });
 }
-
 async function safeJson(response) {
   const text = await response.text();
   if (!text) return {};
