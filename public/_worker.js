@@ -18,7 +18,13 @@ if (url.pathname === "/api/audio") return handleAudio(request, env);
 return env.ASSETS.fetch(request);
   }
 };
-
+function countWords(text) {
+  return String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
+}
 async function handleGenerate(request, env) {
   if (request.method !== "POST") {
     return json({ error: "POST method જરૂરી છે." }, 405);
@@ -60,11 +66,11 @@ async function handleGenerate(request, env) {
 વિષય માર્ગદર્શન: ${guidance}
 સમય: ${minutes} મિનિટ.
 ઝડપ: ${wpm} શબ્દ પ્રતિ મિનિટ.
-લક્ષ્ય આશરે ${targetWords} શબ્દો.
+લક્ષ્ય ઓછામાં ઓછા ${targetWords} અને વધુમાં વધુ ${targetWords + 20} શબ્દો.
 
 એક સતત, સ્વાભાવિક અને પરીક્ષા-ઉપયોગી ગુજરાતી ગદ્ય ફકરો લખો.
 શુદ્ધ ગુજરાતી જોડણી, વ્યાકરણ અને વિરામચિહ્નો વાપરો.
-શબ્દસંખ્યા લક્ષ્યની નજીક રાખો.
+શબ્દોની સંખ્યા ગણો. ${targetWords} કરતાં એક પણ શબ્દ ઓછો ન હોવો જોઈએ. શક્ય હોય તો ${targetWords + 10} થી ${targetWords + 20} શબ્દો લખો. ફકરો અધૂરો ન રાખવો.
 
 માત્ર માન્ય JSON આપો. Markdown નહીં.
 આ જ ફોર્મેટ વાપરો:
@@ -97,6 +103,11 @@ async function handleGenerate(request, env) {
     const result = await safeJson(apiRes);
 
     if (!apiRes.ok) {
+ 
+      return json({
+        error: "Gemini તરફથી ખાલી જવાબ મળ્યો. ફરી પ્રયાસ કરો."
+      }, 502);
+    }
       return json({
         error: result?.error?.message ||
           `Gemini text API error (HTTP ${apiRes.status}).`,
@@ -108,10 +119,7 @@ async function handleGenerate(request, env) {
       ?.map(p => p.text || "").join("").trim();
 
     if (!raw) {
-      return json({
-        error: "Gemini તરફથી ખાલી જવાબ મળ્યો. ફરી પ્રયાસ કરો."
-      }, 502);
-    }
+          
 
     let parsed;
 
@@ -131,7 +139,66 @@ async function handleGenerate(request, env) {
         error: "AI response માં passage ગાયબ છે."
       }, 502);
     }
+     let actualWords = countWords(parsed.passage);
 
+    for (let attempt = 1; actualWords < targetWords && attempt <= 3; attempt++) {
+      const retryPrompt = `${prompt}
+
+પહેલાનો ફકરો માત્ર ${actualWords} શબ્દોનો હતો.
+આ વખતે ઓછામાં ઓછા ${targetWords} અને વધુમાં વધુ ${targetWords + 20} શબ્દોનો નવો ફકરો લખો.
+શબ્દોની સંખ્યા લક્ષ્ય કરતાં ઓછી ન હોવી જોઈએ.
+માત્ર JSON આપો: {"passage":"..."}`;
+
+      const retryBody = {
+        ...requestBody,
+        contents: [
+          { role: "user", parts: [{ text: retryPrompt }] }
+        ]
+      };
+
+      let retryRes = await fetchTextModel(
+        TEXT_MODEL, retryBody, env.GEMINI_API_KEY
+      );
+
+      let retryModel = TEXT_MODEL;
+
+      if ([429, 500, 502, 503, 504].includes(retryRes.status)) {
+        retryRes = await fetchTextModel(
+          TEXT_BACKUP_MODEL, retryBody, env.GEMINI_API_KEY
+        );
+        retryModel = TEXT_BACKUP_MODEL;
+      }
+
+      if (!retryRes.ok) continue;
+
+      const retryResult = await safeJson(retryRes);
+      const retryRaw = retryResult?.candidates?.[0]?.content?.parts
+        ?.map(p => p.text || "").join("").trim();
+
+      if (!retryRaw) continue;
+
+      try {
+        const retryParsed = JSON.parse(retryRaw);
+
+        if (typeof retryParsed.passage === "string") {
+          const retryCount = countWords(retryParsed.passage);
+
+          if (retryCount >= targetWords) {
+            parsed = retryParsed;
+            usedModel = retryModel;
+            actualWords = retryCount;
+          }
+        }
+      } catch {}
+    }
+
+    if (actualWords < targetWords) {
+      return json({
+        error: `લક્ષ્ય ${targetWords} શબ્દો છે, પરંતુ પૂરતા શબ્દોનો ફકરો તૈયાર થઈ શક્યો નથી. ફરી પ્રયાસ કરો.`,
+        actualWords,
+        targetWords
+      }, 502);
+              }
     return json({
       passage: parsed.passage,
       model: usedModel
