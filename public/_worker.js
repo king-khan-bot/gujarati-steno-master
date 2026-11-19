@@ -137,24 +137,7 @@ let parsed;
         error: "AI response માં passage ગાયબ છે."
       }, 502);
     }
-     let actualWords = countWords(parsed.passage);
-
-    for (let attempt = 1; actualWords < targetWords && attempt <= 3; attempt++) {
-      const retryPrompt = `${prompt}
-
-પહેલાનો ફકરો માત્ર ${actualWords} શબ્દોનો હતો.
-આ વખતે ઓછામાં ઓછા ${targetWords} અને વધુમાં વધુ ${targetWords + 20} શબ્દોનો નવો ફકરો લખો.
-શબ્દોની સંખ્યા લક્ષ્ય કરતાં ઓછી ન હોવી જોઈએ.
-માત્ર JSON આપો: {"passage":"..."}`;
-
-      const retryBody = {
-        ...requestBody,
-        contents: [
-          { role: "user", parts: [{ text: retryPrompt }] }
-        ]
-      };
-
-      let actualWords = countWords(parsed.passage);
+     let actualwords = countwords(parsed.passage);
 let combinedPassage = parsed.passage.trim();
 
 for (let attempt = 1; actualWords < targetWords && attempt <= 5; attempt++) {
