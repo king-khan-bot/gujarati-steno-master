@@ -97,6 +97,60 @@ $("result").scrollIntoView({behavior:"smooth", block:"start"});
   $("generate").textContent = "✦ Generate Gujarati Dictation";
 }
 }
+async function makeAudio(){
+  if(!currentPassage) return;
+
+  $("makeAudio").disabled = true;
+  $("makeAudio").textContent = "Creating audio...";
+  setStatus("Gemini Gujarati voice audio બનાવી રહ્યું છે...");
+
+  try {
+    const res = await fetch("/api/audio", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        text: currentPassage,
+        voice: $("voice").value,
+        wpm: Number($("wpm").value)
+      })
+    });
+
+    if(!res.ok) {
+      const raw = await res.text();
+      let err = {};
+      try { err = raw ? JSON.parse(raw) : {}; } catch {}
+      throw new Error(err.error || `Audio error HTTP ${res.status}`);
+    }
+
+    currentAudioBlob = await res.blob();
+    generatedWpm = Number($("wpm").value);
+
+    const url = URL.createObjectURL(currentAudioBlob);
+    $("audio").src = url;
+    $("audio").playbackRate = 1;
+
+    const speedSelect = $("audioSpeed");
+    speedSelect.innerHTML = "";
+
+    [60,80,90,110].forEach(speed => {
+      const opt = document.createElement("option");
+      opt.value = String(speed/generatedWpm);
+      opt.textContent = `${speed} WPM (approx.)`;
+      if(speed === generatedWpm) opt.selected = true;
+      speedSelect.appendChild(opt);
+    });
+
+    $("downloadAudio").href = url;
+    $("audioControls").classList.remove("hidden");
+    setStatus("Audio તૈયાર છે. Play કરો અથવા WAV download કરો.");
+
+  } catch(err) {
+    setStatus(err.message);
+  } finally {
+    $("makeAudio").disabled = false;
+    $("makeAudio").textContent = "Generate Audio";
+  }
+}
 async function audioAtSelectedSpeed(){
   if(!currentAudioBlob) return;
   const rate=Number($("audioSpeed").value);
