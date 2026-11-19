@@ -21,31 +21,45 @@ function showPassage(data){
   $("wordCount").textContent=wordCount(currentPassage);
   $("charCount").textContent=[...currentPassage].length;
   $("targetCount").textContent=Number($("minutes").value)*Number($("wpm").value);
-  fillList("easy",data.vocabulary?.easy);
-  fillList("medium",data.vocabulary?.medium);
-  fillList("hard",data.vocabulary?.hard);
+  
   $("result").classList.remove("hidden");
   $("audioControls").classList.add("hidden");
   $("audio").removeAttribute("src");
   currentAudioBlob=null;
 }
 async function generate(){
-  const payload={exam:$("exam").value,minutes:Number($("minutes").value),wpm:Number($("wpm").value)};
-  $("generate").disabled=true;$("generate").textContent="Generating…";setStatus("Gemini AI ગુજરાતી ફકરો તૈયાર કરી રહ્યું છે…");
-  try{
-    const res=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  const payload = {
+    exam: $("exam").value,
+    minutes: Number($("minutes").value),
+    wpm: Number($("wpm").value)
+  };
+
+  $("generate").disabled = true;
+  $("generate").textContent = "Generating…";
+  setStatus("Gemini AI ગુજરાતી ફકરો તૈયાર કરી રહ્યું છે…");
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    });
+
     const raw = await res.text();
     let data = {};
-    try { data = raw ? JSON.parse(raw) : {}; }
-    catch { throw new Error(`Server એ JSON બદલે ખાલી/અયોગ્ય જવાબ આપ્યો (HTTP ${res.status}).`); }
-    if(!res.ok) throw new Error(data.error||`Passage generate થઈ શક્યો નથી (HTTP ${res.status}).`);
-    if(!data.passage || !data.vocabulary) throw new Error(data.error || "Server response અધૂરો છે. ફરી પ્રયાસ કરો.");
-    showPassage(data);setStatus("તમારો નવો Dictation Passage તૈયાર છે.");
-    $("result").scrollIntoView({behavior:"smooth",block:"start"});
-  }catch(err){setStatus(err.message)}
-  finally{$("generate").disabled=false;$("generate").textContent="✦ Generate Gujarati Dictation"}
-}
-async function makeAudio(){
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error("Server નો જવાબ યોગ્ય નથી.");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || `Error HTTP ${res.status}`);
+    }
+
+    if (!data.passage) {
+      throw new Error("Passage મળ્યો નથી.");
+   async function makeAudio(){
   if(!currentPassage)return;
   $("makeAudio").disabled=true;$("makeAudio").textContent="Creating audio…";setStatus("Gemini Gujarati voice audio બનાવી રહ્યું છે. થોડો સમય લાગી શકે છે…");
   try{
