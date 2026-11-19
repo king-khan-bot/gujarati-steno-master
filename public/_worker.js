@@ -128,11 +128,34 @@ async function handleAudio(request, env) {
 }
 
 async function fetchTextModel(model, requestBody, apiKey) {
-  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify(requestBody)
-  });
+  try {
+    return await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(20000)
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          message: "Gemini request timed out. Please try again."
+        }
+      }),
+      {
+        status: 504,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
 }
 async function safeJson(response) {
   const text = await response.text();
