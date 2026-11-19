@@ -12,24 +12,40 @@ export default {
     if (url.pathname === "/test") {
       return new Response("Functions working!", { headers: { "Content-Type": "text/plain; charset=utf-8" } });
     }
-    if (url.pathname === "/api/generate") return handleGenerate(request, env);
-    if (url.pathname === "/api/audio") return handleAudio(request, env);
-    return env.ASSETS.fetch(request);
+if (url.pathname === "/api/generate") return handleGenerate(request, env);
+if (url.pathname === "/api/vocabulary") return handleVocabulary(request, env);
+if (url.pathname === "/api/audio") return handleAudio(request, env);
+return env.ASSETS.fetch(request);
   }
 };
 
 async function handleGenerate(request, env) {
-  if (request.method !== "POST") return json({ error: "POST method જરૂરી છે." }, 405);
-  if (!env.GEMINI_API_KEY) return json({ error: "Cloudflare Secret GEMINI_API_KEY સેટ નથી." }, 500);
+  if (request.method !== "POST") {
+    return json({ error: "POST method જરૂરી છે." }, 405);
+  }
+
+  if (!env.GEMINI_API_KEY) {
+    return json({ error: "Cloudflare Secret GEMINI_API_KEY સેટ નથી." }, 500);
+  }
+
   try {
     const body = await request.json();
     const exam = String(body.exam || "");
     const minutes = Number(body.minutes);
     const wpm = Number(body.wpm);
-    if (!ALLOWED_EXAMS.includes(exam) || !ALLOWED_MINUTES.includes(minutes) || !ALLOWED_WPM.includes(wpm)) {
-      return json({ error: "પરીક્ષા, સમય અથવા ઝડપની પસંદગી માન્ય નથી." }, 400);
+
+    if (
+      !ALLOWED_EXAMS.includes(exam) ||
+      !ALLOWED_MINUTES.includes(minutes) ||
+      !ALLOWED_WPM.includes(wpm)
+    ) {
+      return json({
+        error: "પરીક્ષા, સમય અથવા ઝડપની પસંદગી માન્ય નથી."
+      }, 400);
     }
+
     const targetWords = minutes * wpm;
+
     const guidance = exam === "HIGH COURT"
       ? "ગુજરાત હાઈકોર્ટ અને ન્યાયિક વહીવટને અનુરૂપ સામાન્ય કાનૂની વિષયો, બંધારણીય જોગવાઈઓ, ન્યાયિક પ્રક્રિયા, નાગરિક અધિકારો અને કોર્ટ વહીવટ. બનાવટી કેસ નંબર, ચુકાદા અથવા કાનૂની ઉદ્ધરણ ન આપો."
       : {
@@ -37,49 +53,96 @@ async function handleGenerate(request, env) {
           GPSC: "GPSC સ્તરને અનુરૂપ ગુજરાતનો ઇતિહાસ, ભૂગોળ, બંધારણ, જાહેર વહીવટ, અર્થતંત્ર, વિજ્ઞાન અને જાહેર મુદ્દાઓ.",
           GCC: "ગુજરાતી કચેરીય વહીવટ, સરકારી પત્રવ્યવહાર, જાહેર સેવા અને સામાન્ય જ્ઞાનને અનુરૂપ વિષયો."
         }[exam];
+
     const prompt = `તમે ગુજરાતી ભાષાના અનુભવી પરીક્ષા-પ્રશ્નલેખક અને ભાષા સંપાદક છો.
+
 પરીક્ષા: ${exam}
 વિષય માર્ગદર્શન: ${guidance}
-સમય: ${minutes} મિનિટ. ઝડપ: ${wpm} શબ્દ પ્રતિ મિનિટ. લક્ષ્ય આશરે ${targetWords} શબ્દો.
-એક સતત, સ્વાભાવિક અને પરીક્ષા-ઉપયોગી ગુજરાતી ગદ્ય ફકરો લખો. શુદ્ધ ગુજરાતી જોડણી, વ્યાકરણ અને વિરામચિહ્નો વાપરો. શબ્દસંખ્યા લક્ષ્યની નજીક રાખો.
-ફકરામાંથી બરાબર 30 સરળ, 30 મધ્યમ અને 30 અઘરા શબ્દો પસંદ કરો. દરેક શબ્દનો ટૂંકો સરળ ગુજરાતી અર્થ આપો. ત્રણ યાદીઓમાં પુનરાવર્તિત શબ્દ ન હોવો જોઈએ. શબ્દો ફકરામાંથી જ લેવા.
-માત્ર માન્ય JSON આપો, Markdown નહીં:
-{"passage":"...","vocabulary":{"easy":[{"word":"...","meaning":"..."}],"medium":[{"word":"...","meaning":"..."}],"hard":[{"word":"...","meaning":"..."}]}}
-દરેક યાદીમાં બરાબર 30 entries હોવી જરૂરી છે.`;
+સમય: ${minutes} મિનિટ.
+ઝડપ: ${wpm} શબ્દ પ્રતિ મિનિટ.
+લક્ષ્ય આશરે ${targetWords} શબ્દો.
+
+એક સતત, સ્વાભાવિક અને પરીક્ષા-ઉપયોગી ગુજરાતી ગદ્ય ફકરો લખો.
+શુદ્ધ ગુજરાતી જોડણી, વ્યાકરણ અને વિરામચિહ્નો વાપરો.
+શબ્દસંખ્યા લક્ષ્યની નજીક રાખો.
+
+માત્ર માન્ય JSON આપો. Markdown નહીં.
+આ જ ફોર્મેટ વાપરો:
+{"passage":"અહીં સંપૂર્ણ ગુજરાતી ફકરો લખો."}`;
 
     const requestBody = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.55, maxOutputTokens: 12000 }
+      contents: [
+        { role: "user", parts: [{ text: prompt }] }
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.55,
+        maxOutputTokens: 8000
+      }
     };
-    // Primary model first; use the lighter backup when the primary is overloaded.
-    let apiRes = await fetchTextModel(TEXT_MODEL, requestBody, env.GEMINI_API_KEY);
+
+    let apiRes = await fetchTextModel(
+      TEXT_MODEL, requestBody, env.GEMINI_API_KEY
+    );
+
     let usedModel = TEXT_MODEL;
+
     if ([429, 500, 502, 503, 504].includes(apiRes.status)) {
-      apiRes = await fetchTextModel(TEXT_BACKUP_MODEL, requestBody, env.GEMINI_API_KEY);
+      apiRes = await fetchTextModel(
+        TEXT_BACKUP_MODEL, requestBody, env.GEMINI_API_KEY
+      );
       usedModel = TEXT_BACKUP_MODEL;
     }
-    const result = await safeJson(apiRes);
-    if (!apiRes.ok) return json({ error: result?.error?.message || `Gemini text API error (HTTP ${apiRes.status}).`, model: usedModel }, apiRes.status);
-    const raw = result?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
-    if (!raw) return json({ error: "Gemini તરફથી ખાલી જવાબ મળ્યો. ફરી પ્રયાસ કરો." }, 502);
-    let parsed;
-    try { parsed = JSON.parse(raw); }
-    catch { return json({ error: "Gemini એ યોગ્ય JSON આપ્યું નથી. ફરી Generate કરો." }, 502); }
-    if (typeof parsed.passage !== "string" || !parsed.passage.trim() || !parsed.vocabulary) {
-      return json({ error: "AI response માં passage અથવા vocabulary ગાયબ છે." }, 502);
-    }
-    for (const level of ["easy", "medium", "hard"]) {
-      if (!Array.isArray(parsed.vocabulary[level]) || parsed.vocabulary[level].length < 30) {
-        return json({ error: `AI એ ${level} vocabulary માં 30 શબ્દ આપ્યા નથી. ફરી Generate કરો.` }, 502);
-      }
-      parsed.vocabulary[level] = parsed.vocabulary[level].slice(0, 30);
-    }
-    return json({ passage: parsed.passage, vocabulary: parsed.vocabulary });
-  } catch (error) {
-    return json({ error: error?.message || "Generate server error." }, 500);
-  }
-}
 
+    const result = await safeJson(apiRes);
+
+    if (!apiRes.ok) {
+      return json({
+        error: result?.error?.message ||
+          `Gemini text API error (HTTP ${apiRes.status}).`,
+        model: usedModel
+      }, apiRes.status);
+    }
+
+    const raw = result?.candidates?.[0]?.content?.parts
+      ?.map(p => p.text || "").join("").trim();
+
+    if (!raw) {
+      return json({
+        error: "Gemini તરફથી ખાલી જવાબ મળ્યો. ફરી પ્રયાસ કરો."
+      }, 502);
+    }
+
+    let parsed;
+
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return json({
+        error: "Gemini એ યોગ્ય JSON આપ્યું નથી. ફરી Generate કરો."
+      }, 502);
+    }
+
+    if (
+      typeof parsed.passage !== "string" ||
+      !parsed.passage.trim()
+    ) {
+      return json({
+        error: "AI response માં passage ગાયબ છે."
+      }, 502);
+    }
+
+    return json({
+      passage: parsed.passage,
+      model: usedModel
+    });
+
+  } catch (error) {
+    return json({
+      error: error?.message || "Generate server error."
+    }, 500);
+  }
+      }
 async function handleAudio(request, env) {
   if (request.method !== "POST") return json({ error: "POST method જરૂરી છે." }, 405);
   if (!env.GEMINI_API_KEY) return json({ error: "Cloudflare Secret GEMINI_API_KEY સેટ નથી." }, 500);
@@ -185,3 +248,113 @@ function pcmToWav(pcm, sampleRate, channels, bitsPerSample) {
   const output = new Uint8Array(44 + dataSize); output.set(new Uint8Array(header), 0); output.set(pcm, 44);
   return output;
 }
+async function handleVocabulary(request, env) {
+  if (request.method !== "POST") {
+    return json({ error: "POST method જરૂરી છે." }, 405);
+  }
+
+  if (!env.GEMINI_API_KEY) {
+    return json({ error: "GEMINI_API_KEY સેટ નથી." }, 500);
+  }
+
+  try {
+    const body = await request.json();
+    const passage = String(body.passage || "").trim();
+
+    if (!passage || passage.length > 30000) {
+      return json({ error: "માન્ય ગુજરાતી ફકરો જરૂરી છે." }, 400);
+    }
+
+    const prompt = `તમે ગુજરાતી ભાષાના નિષ્ણાત શબ્દકોશકાર છો.
+
+નીચેના ફકરામાંથી જ શબ્દો પસંદ કરો:
+${passage}
+
+બરાબર 30 સરળ, 30 મધ્યમ અને 30 અઘરા ગુજરાતી શબ્દો પસંદ કરો.
+દરેક શબ્દનો ટૂંકો અને સરળ ગુજરાતી અર્થ આપો.
+ત્રણેય યાદીઓમાં એક જ શબ્દ ફરી આવવો જોઈએ નહીં.
+ફકરામાં ન હોય તેવા શબ્દો પસંદ ન કરો.
+
+માત્ર માન્ય JSON આપો. Markdown નહીં.
+આ જ ફોર્મેટ વાપરો:
+{"vocabulary":{"easy":[{"word":"શબ્દ","meaning":"અર્થ"}],"medium":[{"word":"શબ્દ","meaning":"અર્થ"}],"hard":[{"word":"શબ્દ","meaning":"અર્થ"}]}}`;
+
+    const requestBody = {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.3,
+        maxOutputTokens: 8000
+      }
+    };
+
+    let apiRes = await fetchTextModel(
+      TEXT_MODEL, requestBody, env.GEMINI_API_KEY
+    );
+
+    let usedModel = TEXT_MODEL;
+
+    if ([429, 500, 502, 503, 504].includes(apiRes.status)) {
+      apiRes = await fetchTextModel(
+        TEXT_BACKUP_MODEL, requestBody, env.GEMINI_API_KEY
+      );
+      usedModel = TEXT_BACKUP_MODEL;
+    }
+
+    const result = await safeJson(apiRes);
+
+    if (!apiRes.ok) {
+      return json({
+        error: result?.error?.message ||
+          `Gemini API error HTTP ${apiRes.status}`,
+        model: usedModel
+      }, apiRes.status);
+    }
+
+    const raw = result?.candidates?.[0]?.content?.parts
+      ?.map(p => p.text || "").join("").trim();
+
+    if (!raw) {
+      return json({ error: "Vocabulary નો ખાલી જવાબ મળ્યો." }, 502);
+    }
+
+    let parsed;
+
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return json({ error: "Vocabulary JSON યોગ્ય નથી." }, 502);
+    }
+
+    const vocabulary = parsed.vocabulary;
+
+    for (const level of ["easy", "medium", "hard"]) {
+      if (
+        !Array.isArray(vocabulary?.[level]) ||
+        vocabulary[level].length !== 30
+      ) {
+        return json({
+          error: `${level} માં બરાબર 30 શબ્દો મળ્યા નથી. ફરી પ્રયાસ કરો.`
+        }, 502);
+      }
+
+      for (const item of vocabulary[level]) {
+        if (
+          typeof item.word !== "string" ||
+          typeof item.meaning !== "string"
+        ) {
+          return json({
+            error: "Vocabulary format યોગ્ય નથી."
+          }, 502);
+        }
+      }
+    }
+
+    return json({ vocabulary, model: usedModel });
+
+  } catch (error) {
+    return json({
+      error: error?.message || "Vocabulary server error."
+    }, 500);
+  }
+                 }
