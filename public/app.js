@@ -147,3 +147,6 @@ $("copy").addEventListener("click",async()=>{
   try{await navigator.clipboard.writeText(currentPassage);setStatus("Passage copied.");}
   catch{setStatus("Copy માટે browser permission જરૂરી છે.");}
 });
+$("generate").addEventListener("click", generate);
+$("newPassage").addEventListener("click", generate);
+$("makeAudio").addEventListener("click", makeAudio);
