@@ -137,7 +137,7 @@ let parsed;
         error: "AI response માં passage ગાયબ છે."
       }, 502);
     }
-     let actualwords = countWords(parsed.passage);
+     let actualWords = countWords(parsed.passage);
 let combinedPassage = parsed.passage.trim();
 
 for (let attempt = 1; actualWords < targetWords && attempt <= 5; attempt++) {
