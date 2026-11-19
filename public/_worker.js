@@ -191,7 +191,7 @@ let parsed;
 
     if (actualWords < targetWords) {
       return json({
-        error: `લક્ષ્ય ${targetWords} શબ્દો છે, પરંતુ પૂરતા શબ્દોનો ફકરો તૈયાર થઈ શક્યો નથી. ફરી પ્રયાસ કરો.`,
+        error: `લક્ષ્ય ${targetWords} શબ્દો છે, પરંતુ Gemini એ માત્ર ${actualWords} શબ્દો આપ્યા. Model: ${usedModel}.`,
         actualWords,
         targetWords
       }, 502);
