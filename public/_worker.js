@@ -19,11 +19,12 @@ return env.ASSETS.fetch(request);
   }
 };
 function countWords(text) {
-  return String(text || "")
+  const words = String(text || "")
     .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .length;
+    .match(/\S+/gu);
+
+  return words ? words.length : 0;
+
 }
 async function handleGenerate(request, env) {
   if (request.method !== "POST") {
